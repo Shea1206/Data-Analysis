@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>白银套利分析计算器</title>
+<style>
+  :root {
+    --silver: #c0c0c0;
+    --silver-light: #e8e8e8;
+    --silver-dark: #a0a0a0;
+    --silver-bg: #f5f5f5;
+    --silver-card: #fafafa;
+    --primary: #5a6c7d;
+    --primary-light: #e2e8f0;
+    --success: #2e7d52;
+    --danger: #b71c1c;
+    --warning: #c77700;
+    --text: #2c3e50;
+    --text-secondary: #5a6c7d;
+    --border: #c0c0c0;
+    --shadow: 0 2px 8px rgba(100,100,100,0.08);
+    --radius: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 50%, #d0d0d0 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #8899a6 0%, #a0b0bc 50%, #b8c8d4 100%);
+    color: #2c3e50;
+    padding: 28px 20px 32px;
+    text-align: center;
+    border-bottom: 3px solid #c0c0c0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  }
+  .header h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: 3px; color: #1a252f; }
+  .header p { margin-top: 8px; font-size: 0.9rem; color: #4a5568; font-weight: 500; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px 40px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(10px);
+    padding: 10px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--silver);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .tab {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+  .tab:hover { background: var(--silver-light); color: var(--text); }
+  .tab.active { background: linear-gradient(135deg, #8899a6 0%, #a0b0bc 100%); color: white; box-shadow: 0 2px 8px rgba(136,153,166,0.4); }
+
+  .section { display: none; }
+  .section.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Cards */
+  .card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px;
+    margin-bottom: 16px;
+    border: 1px solid var(--silver-light);
+    transition: box-shadow 0.2s;
+  }
+  .card:hover { box-shadow: 0 4px 16px rgba(100,100,100,0.12); }
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--silver-light);
+    letter-spacing: 1px;
+  }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+
+  /* Form */
+  .form-group { margin-bottom: 0; }
+  .form-group label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--silver-light);
+    border-radius: 4px;
+    font-size: 0.92rem;
+    transition: all 0.2s;
+    font-family: inherit;
+    background: #fafafa;
+    color: var(--text);
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #8899a6;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(136,153,166,0.15);
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 12px 32px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 1px;
+    margin-top: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #8899a6 0%, #a0b0bc 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(136,153,166,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(136,153,166,0.45); }
+  .btn-success {
+    background: linear-gradient(135deg, #6b9080 0%, #7da894 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(107,144,128,0.35);
+  }
+  .btn-success:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(107,144,128,0.45); }
+
+  /* Result Box */
+  .result-box {
+    background: linear-gradient(135deg, rgba(232,232,232,0.6) 0%, rgba(240,240,240,0.5) 100%);
+    border: 1.5px solid var(--silver);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 16px;
+    animation: slideUp 0.4s ease;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+  }
+
+  /* Result Items with Tooltip */
+  .result-item {
+    background: white;
+    padding: 14px 16px;
+    border-radius: 4px;
+    border-left: 3px solid #8899a6;
+    position: relative;
+    cursor: help;
+    transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .result-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-left-color: #5a6c7d;
+  }
+  .result-item.danger { border-left-color: var(--danger); }
+  .result-item.success { border-left-color: var(--success); }
+  .result-item.warning { border-left-color: var(--warning); }
+  .result-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .result-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .result-value.positive { color: var(--success); }
+  .result-value.negative { color: var(--danger); }
+
+  /* Tooltip */
+  .result-item .tooltip {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+    background: #2d3748;
+    color: #e2e8f0;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-family: "SF Mono", Monaco, "Cascadia Code", "Fira Code", monospace;
+    line-height: 2;
+    white-space: pre-wrap;
+    word-break: break-all;
+    z-index: 1000;
+    min-width: 340px;
+    max-width: 520px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    border: 1px solid #4a5568;
+  }
+  .result-item .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 8px solid transparent;
+    border-top-color: #2d3748;
+  }
+  .result-item:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  /* Strategy Tabs */
+  .strategy-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .strategy-tab {
+    padding: 9px 16px;
+    border: 1.5px solid var(--silver-light);
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+  .strategy-tab:hover {
+    border-color: #8899a6;
+    color: var(--text);
+    background: var(--silver-bg);
+  }
+  .strategy-tab.active {
+    background: linear-gradient(135deg, #8899a6 0%, #a0b0bc 100%);
+    color: white;
+    border-color: #8899a6;
+    box-shadow: 0 3px 10px rgba(136,153,166,0.3);
+  }
+
+  /* Hint */
+  .hint {
+    font-size: 0.82rem;
+    color: #744210;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    border-left: 3px solid var(--warning);
+    font-weight: 500;
+  }
+
+  /* Fee Table */
+  .fee-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-top: 10px;
+    background: white;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .fee-table th, .fee-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--silver-light);
+  }
+  .fee-table th {
+    background: linear-gradient(135deg, #e2e8f0 0%, #d0d8e0 100%);
+    color: #4a5568;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .fee-table tr:hover { background: var(--silver-bg); }
+  .fee-table td { color: var(--text); font-weight: 500; }
+  .fee-table td:first-child { font-weight: 700; color: #4a5568; }
+
+  @media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .tabs { overflow-x: auto; flex-wrap: nowrap; }
+    .result-grid { grid-template-columns: 1fr; }
+    .strategy-tabs { overflow-x: auto; flex-wrap: nowrap; }
+    .header h1 { font-size: 1.3rem; }
+    .card { padding: 16px; }
+    .result-item .tooltip { min-width: 260px; max-width: 90vw; font-size: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>白银套利分析计算器</h1>
+  <p>报告人：孙诗晴</p>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="showSection('td-arbitrage')">TD-期货套利</button>
+    <button class="tab" onclick="showSection('cash-futures')">期现套利</button>
+    <button class="tab" onclick="showSection('delivery')">交割盈亏</button>
+    <button class="tab" onclick="showSection('td-defer')">TD递延费套利</button>
+    <button class="tab" onclick="showSection('fees')">费率参数</button>
+  </div>
+
+  <!-- ==================== TD-期货套利 ==================== -->
+  <div id="td-arbitrage" class="section active">
+    <div class="card">
+      <div class="card-title">基础参数</div>
+      <div class="grid-4">
+        <div class="form-group">
+          <label>品种</label>
+          <select id="td_variety"><option value="AG">AG (白银)</option><option value="AU">AU (黄金)</option></select>
+        </div>
+        <div class="form-group"><label>数量(kg)</label><input type="number" id="td_qty" value="1" step="0.01"></div>
+        <div class="form-group"><label>TD价格(元/kg)</label><input type="number" id="td_price" value="18368" step="0.01"></div>
+        <div class="form-group"><label>SHF近月价格</label><input type="number" id="td_shf_near" value="18298" step="0.01"></div>
+        <div class="form-group"><label>SHF远月价格</label><input type="number" id="td_shf_far" value="18353" step="0.01"></div>
+        <div class="form-group"><label>今日</label><input type="date" id="td_today"></div>
+        <div class="form-group"><label>近月到期日</label><input type="date" id="td_near_expiry" value="2026-08-15"></div>
+        <div class="form-group"><label>远月到期日</label><input type="date" id="td_far_expiry" value="2026-12-15"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">费率参数</div>
+      <div class="grid-4">
+        <div class="form-group"><label>增值税率</label><input type="number" id="td_vat" value="0.13" step="0.001"></div>
+        <div class="form-group"><label>附加税率</label><input type="number" id="td_surtax" value="0.12" step="0.001"></div>
+        <div class="form-group"><label>印花税率</label><input type="number" id="td_stamp" value="0.0003" step="0.0001"></div>
+        <div class="form-group"><label>SHF保证金率</label><input type="number" id="td_shf_margin_rate" value="0.25" step="0.01"></div>
+        <div class="form-group"><label>TD保证金率</label><input type="number" id="td_td_margin_rate" value="0.21" step="0.01"></div>
+        <div class="form-group"><label>标单质押率</label><input type="number" id="td_pledge_rate" value="0.8" step="0.01"></div>
+        <div class="form-group"><label>标单收益率</label><input type="number" id="td_pledge_yield" value="0" step="0.001"></div>
+        <div class="form-group"><label>资金利率</label><input type="number" id="td_fund_rate" value="0.045" step="0.001"></div>
+        <div class="form-group"><label>递延费率</label><input type="number" id="td_defer_rate" value="0.000125" step="0.00001"></div>
+        <div class="form-group"><label>仓储费(元/kg/天)</label><input type="number" id="td_storage" value="0.016" step="0.001"></div>
+        <div class="form-group"><label>出库费(元/kg)</label><input type="number" id="td_out_fee" value="0.2" step="0.01"></div>
+        <div class="form-group"><label>交割费(元/kg)</label><input type="number" id="td_delivery_fee" value="0.5" step="0.01"></div>
+        <div class="form-group"><label>TD手续费率</label><input type="number" id="td_td_fee_rate" value="0.00016" step="0.00001"></div>
+        <div class="form-group"><label>期货手续费率</label><input type="number" id="td_fut_fee_rate" value="0.000055" step="0.00001"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">策略选择</div>
+      <div class="strategy-tabs">
+        <button class="strategy-tab active" onclick="setTdStrategy('near')">买TD 抛SHF近月</button>
+        <button class="strategy-tab" onclick="setTdStrategy('far')">买TD 抛SHF远月</button>
+        <button class="strategy-tab" onclick="setTdStrategy('shf_near')">买SHF近月 抛TD(不接货)</button>
+        <button class="strategy-tab" onclick="setTdStrategy('shf_far')">买SHF远月 抛TD(不接货)</button>
+      </div>
+      <div class="hint" id="td_hint">策略：买入TD，抛SHF近月期货，持有到期交割</div>
+      <button class="btn btn-primary" onclick="calcTdArbitrage()">计算套利</button>
+      <div id="td_result" class="result-box" style="display:none;">
+        <div class="result-grid" id="td_result_grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 期现套利 ==================== -->
+  <div id="cash-futures" class="section">
+    <div class="card">
+      <div class="card-title">期现套利基础参数</div>
+      <div class="grid-3">
+        <div class="form-group"><label>品种</label><select id="cf_variety"><option>AG</option><option>AU</option><option>CU</option><option>AL</option><option>ZN</option><option>PB</option><option>SN</option><option>NI</option></select></div>
+        <div class="form-group"><label>数量(吨)</label><input type="number" id="cf_qty" value="1" step="0.01"></div>
+        <div class="form-group"><label>近月买入价格</label><input type="number" id="cf_near_price" value="18298" step="0.01"></div>
+        <div class="form-group"><label>远月卖出价格</label><input type="number" id="cf_far_price" value="18353" step="0.01"></div>
+        <div class="form-group"><label>期货保证金率</label><input type="number" id="cf_margin_rate" value="0.25" step="0.01"></div>
+        <div class="form-group"><label>资金成本</label><input type="number" id="cf_fund_cost" value="0.045" step="0.001"></div>
+        <div class="form-group"><label>标单质押率</label><input type="number" id="cf_pledge_rate" value="0.8" step="0.01"></div>
+        <div class="form-group"><label>标单收益率</label><input type="number" id="cf_pledge_yield" value="0" step="0.001"></div>
+        <div class="form-group"><label>增值税率</label><input type="number" id="cf_vat" value="0.13" step="0.001"></div>
+        <div class="form-group"><label>附加税率</label><input type="number" id="cf_surtax" value="0.12" step="0.001"></div>
+        <div class="form-group"><label>印花税率</label><input type="number" id="cf_stamp" value="0.0006" step="0.0001"></div>
+        <div class="form-group"><label>仓储费率(元/kg/天)</label><input type="number" id="cf_storage_rate" value="0.016" step="0.001"></div>
+        <div class="form-group"><label>期货手续费率A</label><input type="number" id="cf_fee_a" value="0.00005" step="0.00001"></div>
+        <div class="form-group"><label>期货手续费率B</label><input type="number" id="cf_fee_b" value="0" step="0.00001"></div>
+        <div class="form-group"><label>交割手续费(元/kg)</label><input type="number" id="cf_delivery_fee" value="0.5" step="0.01"></div>
+        <div class="form-group"><label>标单制作费率</label><input type="number" id="cf_warrant_rate" value="0" step="0.001"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">日期参数</div>
+      <div class="grid-3">
+        <div class="form-group"><label>点价日期/现货购买日期</label><input type="date" id="cf_spot_date"></div>
+        <div class="form-group"><label>生成仓单日期</label><input type="date" id="cf_warrant_date" value="2026-05-30"></div>
+        <div class="form-group"><label>最后交易日/交出仓单日期</label><input type="date" id="cf_expiry_date" value="2026-08-15"></div>
+        <div class="form-group"><label>收款日期</label><input type="date" id="cf_payment_date" value="2026-08-17"></div>
+        <div class="form-group"><label>仓储费付清日期</label><input type="date" id="cf_storage_pay_date" value="2026-08-22"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">期现正套利润核算</div>
+      <button class="btn btn-success" onclick="calcCashFutures()">计算期现套利</button>
+      <div id="cf_result" class="result-box" style="display:none;">
+        <div class="result-grid" id="cf_result_grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 交割盈亏 ==================== -->
+  <div id="delivery" class="section">
+    <div class="card">
+      <div class="card-title">交割基础参数</div>
+      <div class="grid-3">
+        <div class="form-group"><label>品种</label><input type="text" id="dl_variety" value="AG(T+D)"></div>
+        <div class="form-group"><label>数量</label><input type="number" id="dl_qty" value="1" step="0.01"></div>
+        <div class="form-group"><label>增值税调整价格</label><input type="number" id="dl_vat_price" value="18110" step="0.01"></div>
+        <div class="form-group"><label>价差</label><input type="number" id="dl_spread" value="-4" step="0.01"></div>
+        <div class="form-group"><label>当日结算价</label><input type="number" id="dl_settle" value="18368" step="0.01"></div>
+        <div class="form-group"><label>净多持仓</label><input type="number" id="dl_long" value="0" step="1"></div>
+        <div class="form-group"><label>净空持仓</label><input type="number" id="dl_short" value="55831" step="1"></div>
+        <div class="form-group"><label>增值税率</label><input type="number" id="dl_vat" value="0.13" step="0.01"></div>
+        <div class="form-group"><label>资金利率</label><input type="number" id="dl_fund_rate" value="0.045" step="0.001"></div>
+        <div class="form-group"><label>手续费率</label><input type="number" id="dl_fee_rate" value="0.000225" step="0.00001"></div>
+        <div class="form-group"><label>递延费率</label><input type="number" id="dl_defer_rate" value="0.000125" step="0.00001"></div>
+        <div class="form-group"><label>今日</label><input type="date" id="dl_today"></div>
+        <div class="form-group"><label>截止日期</label><input type="date" id="dl_deadline" value="2026-05-31"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">交割策略</div>
+      <div class="strategy-tabs">
+        <button class="strategy-tab active" onclick="setDlStrategy('buy')">买入交割(净多)</button>
+        <button class="strategy-tab" onclick="setDlStrategy('sell')">卖出交割(净空)</button>
+        <button class="strategy-tab" onclick="setDlStrategy('middle')">中买卖</button>
+      </div>
+      <div class="hint" id="dl_hint">持仓为净多，交买&lt;交卖时计算买入交割盈亏</div>
+      <button class="btn btn-primary" onclick="calcDelivery()">计算交割盈亏</button>
+      <div id="dl_result" class="result-box" style="display:none;">
+        <div class="result-grid" id="dl_result_grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TD递延费套利 ==================== -->
+  <div id="td-defer" class="section">
+    <div class="card">
+      <div class="card-title">TD递延费套利参数</div>
+      <div class="grid-3">
+        <div class="form-group"><label>品种</label><select id="defer_variety"><option>ag</option><option>au</option></select></div>
+        <div class="form-group"><label>数量</label><input type="number" id="defer_qty" value="1" step="0.01"></div>
+        <div class="form-group"><label>TD价格</label><input type="number" id="defer_price" value="18368" step="0.01"></div>
+        <div class="form-group"><label>现货升贴水</label><input type="number" id="defer_premium" value="0" step="0.01"></div>
+        <div class="form-group"><label>递延费方向</label>
+          <select id="defer_dir">
+            <option value="1">多付空(收递延费)</option>
+            <option value="-1">空付多(付递延费)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>持有天数</label><input type="number" id="defer_days" value="1" step="1"></div>
+        <div class="form-group"><label>仓储费率</label><input type="number" id="defer_storage_rate" value="0.016" step="0.001"></div>
+        <div class="form-group"><label>资金利率</label><input type="number" id="defer_fund_rate" value="0.05" step="0.001"></div>
+        <div class="form-group"><label>递延费率</label><input type="number" id="defer_rate" value="0.000175" step="0.00001"></div>
+        <div class="form-group"><label>增值税率</label><input type="number" id="defer_vat" value="0.13" step="0.01"></div>
+        <div class="form-group"><label>附加税率</label><input type="number" id="defer_surtax" value="0.12" step="0.01"></div>
+        <div class="form-group"><label>印花税率</label><input type="number" id="defer_stamp" value="0.0003" step="0.0001"></div>
+        <div class="form-group"><label>SHF保证金率</label><input type="number" id="defer_shf_margin" value="0.25" step="0.01"></div>
+        <div class="form-group"><label>TD保证金率</label><input type="number" id="defer_td_margin" value="0.21" step="0.01"></div>
+        <div class="form-group"><label>TD手续费率</label><input type="number" id="defer_td_fee" value="0.00021" step="0.00001"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">策略选择</div>
+      <div class="strategy-tabs">
+        <button class="strategy-tab active" onclick="setDeferStrategy('both')">多空双开，买入交割，空收</button>
+        <button class="strategy-tab" onclick="setDeferStrategy('middle')">中买</button>
+      </div>
+      <button class="btn btn-success" onclick="calcDeferArbitrage()">计算递延费套利</button>
+      <div id="defer_result" class="result-box" style="display:none;">
+        <div class="result-grid" id="defer_result_grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 费率参数 ==================== -->
+  <div id="fees" class="section">
+    <div class="card">
+      <div class="card-title">各品种费率参考表</div>
+      <table class="fee-table">
+        <thead><tr><th>品种</th><th>仓储费</th><th>手续费A</th><th>手续费B</th><th>交割费</th><th>单位</th><th>手手续费</th></tr></thead>
+        <tbody>
+          <tr><td>AG</td><td>0.016</td><td>0.00005</td><td>0</td><td>0.5</td><td>元/千克</td><td>0.5元/kg</td></tr>
+          <tr><td>CU</td><td>0.3</td><td>0.00005</td><td>0</td><td>2</td><td>元/吨</td><td>0.5元/吨</td></tr>
+          <tr><td>AL</td><td>0.4</td><td>0</td><td>0.6</td><td>2</td><td>元/吨</td><td>3元/吨</td></tr>
+          <tr><td>ZN</td><td>0.3</td><td>0</td><td>0.6</td><td>2</td><td>元/吨</td><td>3元/吨</td></tr>
+          <tr><td>PB</td><td>0.7</td><td>0.00004</td><td>0</td><td>—</td><td>元/吨</td><td>0.4元/吨</td></tr>
+          <tr><td>AU</td><td>0.0018</td><td>0</td><td>0.01</td><td>—</td><td>元/克</td><td>10元/克</td></tr>
+          <tr><td>SN</td><td>1.5</td><td>0</td><td>3</td><td>2</td><td>元/吨</td><td>3元/吨</td></tr>
+          <tr><td>NI</td><td>1.25</td><td>0</td><td>6</td><td>2</td><td>元/吨</td><td>6元/吨</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">常用参数速查</div>
+      <div class="grid-2">
+        <div class="result-item"><div class="result-label">递延费率(AG)</div><div class="result-value">0.000125 ~ 0.000175</div></div>
+        <div class="result-item"><div class="result-label">资金利率</div><div class="result-value">4% ~ 5.7%</div></div>
+        <div class="result-item"><div class="result-label">增值税率(白银)</div><div class="result-value">13%</div></div>
+        <div class="result-item"><div class="result-label">附加税率</div><div class="result-value">12%</div></div>
+        <div class="result-item"><div class="result-label">印花税率</div><div class="result-value">0.03% ~ 0.06%</div></div>
+        <div class="result-item"><div class="result-label">TD保证金率</div><div class="result-value">15% ~ 21%</div></div>
+        <div class="result-item"><div class="result-label">SHF保证金率</div><div class="result-value">15% ~ 25%</div></div>
+        <div class="result-item"><div class="result-label">仓储费(AG)</div><div class="result-value">0.016 元/kg/天</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 页面加载时设置今日日期为当前日期
+document.addEventListener('DOMContentLoaded', function() {
+  const today = new Date().toISOString().split('T')[0];
+  document.querySelectorAll('input[type="date"]').forEach(input => {
+    if (!input.value) input.value = today;
+  });
+});
+
+// ==================== 通用工具 ====================
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+function daysBetween(d1, d2) {
+  const a = new Date(d1), b = new Date(d2);
+  return Math.round((b - a) / (1000 * 60 * 60 * 24));
+}
+function fmt(n, d) {
+  if (n === undefined || n === null) return '-';
+  return Number(n).toLocaleString('zh-CN', {minimumFractionDigits: 0, maximumFractionDigits: d});
+}
+function fmtPct(n, d) {
+  return (n*100).toFixed(d) + '%';
+}
+
+// Render results with formula tooltips
+function renderResult(containerId, items, formulas) {
+  const grid = document.getElementById(containerId);
+  grid.innerHTML = items.map((it, idx) => {
+    const cls = it.value > 0 ? 'positive' : (it.value < 0 ? 'negative' : '');
+    const borderCls = it.type || '';
+    let tooltip = '';
+    if (formulas && formulas[idx]) {
+      tooltip = `<div class="tooltip">${formulas[idx]}</div>`;
+    }
+    return `<div class="result-item ${borderCls}">
+      <div class="result-label">${it.label}</div>
+      <div class="result-value ${cls}">${it.text || fmt(it.value, it.precision !== undefined ? it.precision : 4)}</div>
+      ${tooltip}
+    </div>`;
+  }).join('');
+}
+
+// ==================== TD-期货套利 ====================
+let tdStrategy = 'near';
+function setTdStrategy(s) {
+  tdStrategy = s;
+  document.querySelectorAll('#td-arbitrage .strategy-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  const hints = {
+    near: '策略：买入TD，抛SHF近月期货，持有到期交割',
+    far: '策略：买入TD，抛SHF远月期货，持有到期交割',
+    shf_near: '策略：买入SHF近月，抛TD，不接货（有被挤仓危险）',
+    shf_far: '策略：买入SHF远月，抛TD，不接货（有被挤仓危险）'
+  };
+  document.getElementById('td_hint').textContent = hints[s];
+}
+function calcTdArbitrage() {
+  const qty = +document.getElementById('td_qty').value;
+  const tdPrice = +document.getElementById('td_price').value;
+  const shfNear = +document.getElementById('td_shf_near').value;
+  const shfFar = +document.getElementById('td_shf_far').value;
+  const today = document.getElementById('td_today').value;
+  const nearExpiry = document.getElementById('td_near_expiry').value;
+  const farExpiry = document.getElementById('td_far_expiry').value;
+  const shfMarginRate = +document.getElementById('td_shf_margin_rate').value;
+  const tdMarginRate = +document.getElementById('td_td_margin_rate').value;
+  const fundRate = +document.getElementById('td_fund_rate').value;
+  const deferRate = +document.getElementById('td_defer_rate').value;
+  const tdFeeRate = +document.getElementById('td_td_fee_rate').value;
+  const futFeeRate = +document.getElementById('td_fut_fee_rate').value;
+  const vatRate = +document.getElementById('td_vat').value;
+  const surtaxRate = +document.getElementById('td_surtax').value;
+  const stampRate = +document.getElementById('td_stamp').value;
+  const storageRate = +document.getElementById('td_storage').value;
+  const outFeeRate = +document.getElementById('td_out_fee').value;
+  const deliveryFeeRate = +document.getElementById('td_delivery_fee').value;
+
+  const nearDays = daysBetween(today, nearExpiry);
+  const farDays = daysBetween(today, farExpiry);
+  const shfPrice = tdStrategy.includes('near') ? shfNear : shfFar;
+  const holdDays = tdStrategy.includes('near') ? nearDays : farDays;
+
+  // 根据策略自动确定递延费方向：买TD抛SHF时收递延费(+1)，买SHF抛TD时付递延费(-1)
+  const deferDir = tdStrategy.startsWith('shf') ? -1 : 1;
+
+  // 基础成本
+  const marginInterest = qty * (shfPrice * shfMarginRate + tdPrice * tdMarginRate) * fundRate * holdDays / 360;
+  const deferProfit = qty * deferDir * tdPrice * deferRate * holdDays;
+  let positionCost;
+  if (tdStrategy.startsWith('shf')) {
+    positionCost = marginInterest + deferProfit;
+  } else {
+    positionCost = marginInterest - deferProfit;
+  }
+  const futFee = qty * shfPrice * futFeeRate;
+  const tdFee = qty * tdPrice * tdFeeRate;
+
+  // 实物交割相关成本
+  const storageCost = qty * storageRate * holdDays;
+  const outFee = qty * outFeeRate;
+  const deliveryFee = qty * deliveryFeeRate;
+  const priceDiff = Math.abs(shfPrice - tdPrice);
+  const vatCost = qty * priceDiff * vatRate / (1 + vatRate);
+  const surtaxCost = vatCost * surtaxRate;
+  const stampCost = qty * tdPrice * stampRate;
+
+  // 总成本
+  const totalCost = positionCost + futFee + tdFee + storageCost + outFee + deliveryFee + vatCost + surtaxCost + stampCost;
+
+  // 到期收益（含实物交割成本）
+  let profit;
+  if (tdStrategy.startsWith('shf')) {
+    profit = qty * (tdPrice - shfPrice) - totalCost;
+  } else {
+    profit = qty * (shfPrice - tdPrice) - totalCost;
+  }
+
+  // 净利润 = 到期收益（已扣全部成本）
+  const netProfit = profit;
+
+  const returnRate = netProfit / tdPrice;
+  const annualReturn = returnRate / holdDays * 360;
+  const nominalReturn = netProfit / tdPrice;
+  const actualReturn = nominalReturn / (shfMarginRate + tdMarginRate);
+  const actualAnnual = actualReturn / holdDays * 360;
+  const balanceSpread = tdPrice + totalCost / qty;
+  const cashProfit = shfPrice - balanceSpread;
+
+  // 升贴水信号
+  const spread = shfPrice - tdPrice;
+  const spreadSignal = spread > 0 ? '升水' : (spread < 0 ? '贴水' : '平水');
+  const spreadColor = spread > 0 ? 'success' : (spread < 0 ? 'danger' : '');
+
+  const items = [];
+  const formulas = [];
+  let idx = 0;
+
+  // 只展示当前策略对应的持仓天数
+  if (tdStrategy.includes('near')) {
+    items.push({label: '近月持仓天数', value: nearDays, precision: 0});
+    formulas[idx++] = `近月持仓天数 = ${nearExpiry} - ${today} = ${nearDays} 天`;
+  } else {
+    items.push({label: '远月持仓天数', value: farDays, precision: 0});
+    formulas[idx++] = `远月持仓天数 = ${farExpiry} - ${today} = ${farDays} 天`;
+  }
+
+  // 升贴水信号
+  items.push({label: `SHF-TD价差 (${spreadSignal})`, value: spread, precision: 2, type: spreadColor});
+  formulas[idx++] = `价差 = SHF${tdStrategy.includes('near')?'近月':'远月'}(${fmt(shfPrice,2)}) - TD(${fmt(tdPrice,2)}) = ${fmt(spread,2)} 元/kg [${spreadSignal}]`;
+
+  items.push({label: '保证金利息', value: marginInterest, precision: 2});
+  formulas[idx++] = `保证金利息 = ${qty} x (${fmt(shfPrice,2)} x ${fmt(shfMarginRate,4)} + ${fmt(tdPrice,2)} x ${fmt(tdMarginRate,4)}) x ${fmt(fundRate,4)} x ${holdDays}/360 = ${fmt(marginInterest, 2)}`;
+
+  items.push({label: '递延费盈亏', value: deferProfit, precision: 2, type: deferProfit>=0?'success':'danger'});
+  formulas[idx++] = `递延费盈亏 = ${qty} x ${deferDir} x ${fmt(tdPrice,2)} x ${fmt(deferRate,6)} x ${holdDays} = ${fmt(deferProfit, 2)}`;
+
+  items.push({label: '持仓成本', value: positionCost, precision: 2});
+  formulas[idx++] = tdStrategy.startsWith('shf')
+    ? `持仓成本 = 保证金利息 + 递延费盈亏 = ${fmt(marginInterest,2)} + ${fmt(deferProfit,2)} = ${fmt(positionCost, 2)}`
+    : `持仓成本 = 保证金利息 - 递延费盈亏 = ${fmt(marginInterest,2)} - ${fmt(deferProfit,2)} = ${fmt(positionCost, 2)}`;
+
+  items.push({label: '期货手续费', value: futFee, precision: 4});
+  formulas[idx++] = `期货手续费 = ${qty} x ${fmt(shfPrice,2)} x ${fmt(futFeeRate,5)} = ${fmt(futFee, 4)}`;
+
+  items.push({label: 'TD手续费', value: tdFee, precision: 4});
+  formulas[idx++] = `TD手续费 = ${qty} x ${fmt(tdPrice,2)} x ${fmt(tdFeeRate,5)} = ${fmt(tdFee, 4)}`;
+
+  items.push({label: '仓储费', value: storageCost, precision: 2});
+  formulas[idx++] = `仓储费 = ${qty} x ${fmt(storageRate,4)} x ${holdDays} = ${fmt(storageCost, 2)}`;
+
+  items.push({label: '出库费', value: outFee, precision: 2});
+  formulas[idx++] = `出库费 = ${qty} x ${fmt(outFeeRate,2)} = ${fmt(outFee, 2)}`;
+
+  items.push({label: '交割费', value: deliveryFee, precision: 2});
+  formulas[idx++] = `交割费 = ${qty} x ${fmt(deliveryFeeRate,2)} = ${fmt(deliveryFee, 2)}`;
+
+  items.push({label: '增值税', value: vatCost, precision: 2});
+  formulas[idx++] = `增值税 = ${qty} x |${fmt(shfPrice,2)} - ${fmt(tdPrice,2)}| x ${fmt(vatRate,4)} / (1+${fmt(vatRate,4)}) = ${fmt(vatCost, 2)}`;
+
+  items.push({label: '附加税', value: surtaxCost, precision: 2});
+  formulas[idx++] = `附加税 = ${fmt(vatCost,2)} x ${fmt(surtaxRate,4)} = ${fmt(surtaxCost, 2)}`;
+
+  items.push({label: '印花税', value: stampCost, precision: 2});
+  formulas[idx++] = `印花税 = ${qty} x ${fmt(tdPrice,2)} x ${fmt(stampRate,5)} = ${fmt(stampCost, 2)}`;
+
+  items.push({label: '总成本', value: totalCost, precision: 2, type: 'warning'});
+  formulas[idx++] = `总成本 = 持仓成本 + 期货手续费 + TD手续费 + 仓储费 + 出库费 + 交割费 + 增值税 + 附加税 + 印花税 = ${fmt(totalCost, 2)}`;
+
+  items.push({label: '到期收益', value: netProfit, precision: 2, type: netProfit>=0?'success':'danger'});
+  if (tdStrategy.startsWith('shf')) {
+    formulas[idx++] = `到期收益 = ${qty} x (${fmt(tdPrice,2)} - ${fmt(shfPrice,2)}) - ${fmt(totalCost,2)} = ${fmt(netProfit, 2)}`;
+  } else {
+    formulas[idx++] = `到期收益 = ${qty} x (${fmt(shfPrice,2)} - ${fmt(tdPrice,2)}) - ${fmt(totalCost,2)} = ${fmt(netProfit, 2)}`;
+  }
+
+  items.push({label: '到期收益率', value: returnRate, text: fmtPct(returnRate, 4)});
+  formulas[idx++] = `到期收益率 = ${fmt(netProfit,2)} / ${fmt(tdPrice,2)} = ${fmtPct(returnRate, 4)}`;
+
+  items.push({label: '年化收益率', value: annualReturn, text: fmtPct(annualReturn, 4), type: annualReturn>=0?'success':'danger'});
+  formulas[idx++] = `年化收益率 = ${fmtPct(returnRate, 4)} / ${holdDays} x 360 = ${fmtPct(annualReturn, 4)}`;
+
+  items.push({label: '期现平衡价差', value: balanceSpread, precision: 2});
+  formulas[idx++] = `期现平衡价差 = ${fmt(tdPrice,2)} + ${fmt(totalCost/qty,2)} = ${fmt(balanceSpread, 2)}`;
+
+  items.push({label: '期现利润', value: cashProfit, precision: 2, type: cashProfit>=0?'success':'danger'});
+  formulas[idx++] = `期现利润 = ${fmt(shfPrice,2)} - ${fmt(balanceSpread,2)} = ${fmt(cashProfit, 2)}`;
+
+  if (tdStrategy.startsWith('shf')) {
+    items.push({label: '名义收益率', value: nominalReturn, text: fmtPct(nominalReturn, 4)});
+    formulas[idx++] = `名义收益率 = ${fmt(netProfit,2)} / ${fmt(tdPrice,2)} = ${fmtPct(nominalReturn, 4)}`;
+
+    items.push({label: '实际收益率', value: actualReturn, text: fmtPct(actualReturn, 4)});
+    formulas[idx++] = `实际收益率 = ${fmtPct(nominalReturn, 4)} / (${fmt(shfMarginRate,4)} + ${fmt(tdMarginRate,4)}) = ${fmtPct(actualReturn, 4)}`;
+
+    items.push({label: '实际年化收益率', value: actualAnnual, text: fmtPct(actualAnnual, 4), type: actualAnnual>=0?'success':'danger'});
+    formulas[idx++] = `实际年化收益率 = ${fmtPct(actualReturn, 4)} / ${holdDays} x 360 = ${fmtPct(actualAnnual, 4)}`;
+  }
+
+  renderResult('td_result_grid', items, formulas);
+  document.getElementById('td_result').style.display = 'block';
+}
+
+// ==================== 期现套利 ====================
+function calcCashFutures() {
+  const qty = +document.getElementById('cf_qty').value;
+  const nearPrice = +document.getElementById('cf_near_price').value;
+  const farPrice = +document.getElementById('cf_far_price').value;
+  const marginRate = +document.getElementById('cf_margin_rate').value;
+  const fundCost = +document.getElementById('cf_fund_cost').value;
+  const vat = +document.getElementById('cf_vat').value;
+  const surtax = +document.getElementById('cf_surtax').value;
+  const stamp = +document.getElementById('cf_stamp').value;
+  const storageRate = +document.getElementById('cf_storage_rate').value;
+  const feeA = +document.getElementById('cf_fee_a').value;
+  const feeB = +document.getElementById('cf_fee_b').value;
+  const deliveryFee = +document.getElementById('cf_delivery_fee').value;
+  const warrantRate = +document.getElementById('cf_warrant_rate').value;
+  const spotDate = document.getElementById('cf_spot_date').value;
+  const warrantDate = document.getElementById('cf_warrant_date').value;
+  const expiryDate = document.getElementById('cf_expiry_date').value;
+  const paymentDate = document.getElementById('cf_payment_date').value;
+  const storagePayDate = document.getElementById('cf_storage_pay_date').value;
+
+  const fundDays = daysBetween(spotDate, paymentDate);
+  const warrantDays = daysBetween(warrantDate, expiryDate);
+
+  const interest = qty * nearPrice * (1 + marginRate) * fundCost * fundDays / 360;
+  const storageFee = qty * storageRate * daysBetween(spotDate, storagePayDate);
+  const warrantFee = qty * warrantRate;
+  const vatAmt = qty * (farPrice - nearPrice) * vat / (1 + vat);
+  const surtaxAmt = vatAmt * surtax;
+  const stampAmt = qty * nearPrice * stamp;
+  const futFee1 = qty * farPrice * feeA * 2;
+  const futFee2 = qty * feeB * 2;
+  const deliveryFeeAmt = qty * deliveryFee * 2;
+  const totalCost = interest + storageFee + stampAmt + warrantFee + futFee1 + futFee2 + deliveryFeeAmt + surtaxAmt;
+  const netProfit = qty * (farPrice / (1 + vat) - nearPrice / (1 + vat)) - totalCost;
+  const profitRate = netProfit / nearPrice;
+  const annualProfitRate = profitRate / fundDays * 360;
+
+  const purchaseAmt = nearPrice;
+  const netPurchase = nearPrice / (1 + vat);
+  const saleAmt = farPrice;
+  const netSale = farPrice / (1 + vat);
+
+  const items = [
+    {label: '资金占用天数', value: fundDays, precision: 0},
+    {label: '标单持有天数', value: warrantDays, precision: 0},
+    {label: '目前价差', value: farPrice - nearPrice, precision: 2},
+    {label: '利息', value: interest, precision: 2},
+    {label: '仓储费', value: storageFee, precision: 3},
+    {label: '印花税', value: stampAmt, precision: 4},
+    {label: '增值税', value: vatAmt, precision: 4},
+    {label: '附加税', value: surtaxAmt, precision: 4},
+    {label: '期货手续费1', value: futFee1, precision: 4},
+    {label: '期货手续费2', value: futFee2, precision: 4},
+    {label: '交割手续费', value: deliveryFeeAmt, precision: 2},
+    {label: '总成本', value: totalCost, precision: 2, type: 'danger'},
+    {label: '净利润', value: netProfit, precision: 2, type: netProfit>=0?'success':'danger'},
+    {label: '利润率', value: profitRate, text: fmtPct(profitRate, 4)},
+    {label: '年化利润率', value: annualProfitRate, text: fmtPct(annualProfitRate, 4), type: annualProfitRate>=0?'success':'danger'},
+    {label: '采购金额(含税)', value: purchaseAmt, precision: 2},
+    {label: '不含税净进价', value: netPurchase, precision: 4},
+    {label: '销售金额(含税)', value: saleAmt, precision: 2},
+    {label: '不含税净售价', value: netSale, precision: 4},
+  ];
+
+  const formulas = [];
+  formulas[0] = `资金占用天数 = ${paymentDate} - ${spotDate} = ${fundDays} 天`;
+  formulas[1] = `标单持有天数 = ${expiryDate} - ${warrantDate} = ${warrantDays} 天`;
+  formulas[2] = `目前价差 = ${fmt(farPrice,2)} - ${fmt(nearPrice,2)} = ${fmt(farPrice - nearPrice, 2)}`;
+  formulas[3] = `利息 = ${qty} x ${fmt(nearPrice,2)} x (1+${fmt(marginRate,4)}) x ${fmt(fundCost,4)} x ${fundDays}/360 = ${fmt(interest, 2)}`;
+  formulas[4] = `仓储费 = ${qty} x ${fmt(storageRate,4)} x ${daysBetween(spotDate, storagePayDate)} = ${fmt(storageFee, 3)}`;
+  formulas[5] = `印花税 = ${qty} x ${fmt(nearPrice,2)} x ${fmt(stamp,5)} = ${fmt(stampAmt, 4)}`;
+  formulas[6] = `增值税 = ${qty} x (${fmt(farPrice,2)} - ${fmt(nearPrice,2)}) x ${fmt(vat,4)} / (1+${fmt(vat,4)}) = ${fmt(vatAmt, 4)}`;
+  formulas[7] = `附加税 = ${fmt(vatAmt,4)} x ${fmt(surtax,4)} = ${fmt(surtaxAmt, 4)}`;
+  formulas[8] = `期货手续费1 = ${qty} x ${fmt(farPrice,2)} x ${fmt(feeA,5)} x 2 = ${fmt(futFee1, 4)}`;
+  formulas[9] = `期货手续费2 = ${qty} x ${fmt(feeB,5)} x 2 = ${fmt(futFee2, 4)}`;
+  formulas[10] = `交割手续费 = ${qty} x ${fmt(deliveryFee,2)} x 2 = ${fmt(deliveryFeeAmt, 2)}`;
+  formulas[11] = `总成本 = ${fmt(interest,2)} + ${fmt(storageFee,3)} + ${fmt(stampAmt,4)} + ${fmt(warrantFee,4)} + ${fmt(futFee1,4)} + ${fmt(futFee2,4)} + ${fmt(deliveryFeeAmt,2)} + ${fmt(surtaxAmt,4)} = ${fmt(totalCost, 2)}`;
+  formulas[12] = `净利润 = ${qty} x (${fmt(farPrice,2)}/(1+${fmt(vat,4)}) - ${fmt(nearPrice,2)}/(1+${fmt(vat,4)})) - ${fmt(totalCost,2)} = ${fmt(netProfit, 2)}`;
+  formulas[13] = `利润率 = ${fmt(netProfit,2)} / ${fmt(nearPrice,2)} = ${fmtPct(profitRate, 4)}`;
+  formulas[14] = `年化利润率 = ${fmtPct(profitRate, 4)} / ${fundDays} x 365 = ${fmtPct(annualProfitRate, 4)}`;
+  formulas[15] = `采购金额(含税) = ${fmt(purchaseAmt, 2)}`;
+  formulas[16] = `不含税净进价 = ${fmt(nearPrice,2)} / (1+${fmt(vat,4)}) = ${fmt(netPurchase, 4)}`;
+  formulas[17] = `销售金额(含税) = ${fmt(saleAmt, 2)}`;
+  formulas[18] = `不含税净售价 = ${fmt(farPrice,2)} / (1+${fmt(vat,4)}) = ${fmt(netSale, 4)}`;
+
+  renderResult('cf_result_grid', items, formulas);
+  document.getElementById('cf_result').style.display = 'block';
+}
+
+// ==================== 交割盈亏 ====================
+let dlStrategy = 'buy';
+function setDlStrategy(s) {
+  dlStrategy = s;
+  document.querySelectorAll('#delivery .strategy-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  const hints = {
+    buy: '持仓为净多，交买<交卖时计算买入交割盈亏',
+    sell: '持仓为净空，交买>交卖时计算卖出交割盈亏',
+    middle: '中买卖盈亏 = 递延费盈亏 - 增值税调整盈亏 - 手续费 - 资金利息'
+  };
+  document.getElementById('dl_hint').textContent = hints[s];
+}
+function calcDelivery() {
+  const qty = +document.getElementById('dl_qty').value;
+  const vatPrice = +document.getElementById('dl_vat_price').value;
+  const settle = +document.getElementById('dl_settle').value;
+  const longPos = +document.getElementById('dl_long').value;
+  const shortPos = +document.getElementById('dl_short').value;
+  const vat = +document.getElementById('dl_vat').value;
+  const fundRate = +document.getElementById('dl_fund_rate').value;
+  const feeRate = +document.getElementById('dl_fee_rate').value;
+  const deferRate = +document.getElementById('dl_defer_rate').value;
+  const today = document.getElementById('dl_today').value;
+  const deadline = document.getElementById('dl_deadline').value;
+  const days = daysBetween(today, deadline);
+
+  const deferProfit = qty * settle * deferRate * days;
+  const vatAdjust = (vatPrice - settle) * vat / (1 + vat);
+  const interest = qty * settle * fundRate * days / 360;
+  const fee = qty * vatPrice * feeRate * vat / (1 + vat);
+
+  let items = [];
+  let formulas = [];
+
+  if (dlStrategy === 'buy') {
+    const buyQty = longPos * deferProfit / (deferProfit + vatAdjust + interest + fee);
+    const actualBuyQty = 5000;
+    const profit = deferProfit * (longPos - buyQty) - (vatAdjust + interest + fee) * buyQty;
+    const actualProfit = deferProfit * (longPos - actualBuyQty) - (vatAdjust + interest + fee) * actualBuyQty;
+    items = [
+      {label: '递延费盈亏', value: deferProfit, precision: 4},
+      {label: '增值税调整盈亏', value: vatAdjust, precision: 4},
+      {label: '资金利息', value: interest, precision: 4},
+      {label: '手续费', value: fee, precision: 4},
+      {label: '理论交买数量', value: buyQty, precision: 2},
+      {label: '理论利润', value: profit, precision: 2, type: profit>=0?'success':'danger'},
+      {label: '实际交买数量', value: actualBuyQty, precision: 0},
+      {label: '实际盈亏', value: actualProfit, precision: 2, type: actualProfit>=0?'success':'danger'},
+    ];
+    formulas = [
+      `递延费盈亏 = ${qty} x ${fmt(settle,2)} x ${fmt(deferRate,5)} x ${days} = ${fmt(deferProfit, 4)}`,
+      `增值税调整盈亏 = (${fmt(vatPrice,2)} - ${fmt(settle,2)}) x ${fmt(vat,4)} / (1+${fmt(vat,4)}) = ${fmt(vatAdjust, 4)}`,
+      `资金利息 = ${qty} x ${fmt(settle,2)} x ${fmt(fundRate,4)} x ${days}/360 = ${fmt(interest, 4)}`,
+      `手续费 = ${qty} x ${fmt(vatPrice,2)} x ${fmt(feeRate,5)} x ${fmt(vat,4)} / (1+${fmt(vat,4)}) = ${fmt(fee, 4)}`,
+      `理论交买数量 = ${longPos} x ${fmt(deferProfit,4)} / (${fmt(deferProfit,4)} + ${fmt(vatAdjust,4)} + ${fmt(interest,4)} + ${fmt(fee,4)}) = ${fmt(buyQty, 2)}`,
+      `理论利润 = ${fmt(deferProfit,4)} x (${longPos} - ${fmt(buyQty,2)}) - (${fmt(vatAdjust,4)} + ${fmt(interest,4)} + ${fmt(fee,4)}) x ${fmt(buyQty,2)} = ${fmt(profit, 2)}`,
+      `实际交买数量 = ${actualBuyQty}`,
+      `实际盈亏 = ${fmt(deferProfit,4)} x (${longPos} - ${actualBuyQty}) - (${fmt(vatAdjust,4)} + ${fmt(interest,4)} + ${fmt(fee,4)}) x ${actualBuyQty} = ${fmt(actualProfit, 2)}`
+    ];
+  } else if (dlStrategy === 'sell') {
+    const sellQty = shortPos * deferProfit / (deferProfit + vatAdjust - interest + fee);
+    const actualSellQty = 200;
+    const profit = deferProfit * (shortPos - sellQty) - (vatAdjust - interest + fee) * sellQty;
+    const actualProfit = deferProfit * (shortPos - actualSellQty) - (vatAdjust - interest + fee) * actualSellQty;
+    items = [
+      {label: '递延费盈亏', value: deferProfit, precision: 4},
+      {label: '增值税调整盈亏', value: vatAdjust, precision: 4},
+      {label: '资金利息', value: interest, precision: 4},
+      {label: '手续费', value: fee, precision: 4},
+      {label: '理论交卖数量', value: sellQty, precision: 2},
+      {label: '理论利润', value: profit, precision: 2, type: profit>=0?'success':'danger'},
+      {label: '实际交卖数量', value: actualSellQty, precision: 0},
+      {label: '实际盈亏', value: actualProfit, precision: 2, type: actualProfit>=0?'success':'danger'},
+    ];
+    formulas = [
+      `递延费盈亏 = ${qty} x ${fmt(settle,2)} x ${fmt(deferRate,5)} x ${days} = ${fmt(deferProfit, 4)}`,
+      `增值税调整盈亏 = (${fmt(vatPrice,2)} - ${fmt(settle,2)}) x ${fmt(vat,4)} / (1+${fmt(vat,4)}) = ${fmt(vatAdjust, 4)}`,
+      `资金利息 = ${qty} x ${fmt(settle,2)} x ${fmt(fundRate,4)} x ${days}/360 = ${fmt(interest, 4)}`,
+      `手续费 = ${qty} x ${fmt(vatPrice,2)} x ${fmt(feeRate,5)} x ${fmt(vat,4)} / (1+${fmt(vat,4)}) = ${fmt(fee, 4)}`,
+      `理论交卖数量 = ${shortPos} x ${fmt(deferProfit,4)} / (${fmt(deferProfit,4)} + ${fmt(vatAdjust,4)} - ${fmt(interest,4)} + ${fmt(fee,4)}) = ${fmt(sellQty, 2)}`,
+      `理论利润 = ${fmt(deferProfit,4)} x (${shortPos} - ${fmt(sellQty,2)}) - (${fmt(vatAdjust,4)} - ${fmt(interest,4)} + ${fmt(fee,4)}) x ${fmt(sellQty,2)} = ${fmt(profit, 2)}`,
+      `实际交卖数量 = ${actualSellQty}`,
+      `实际盈亏 = ${fmt(deferProfit,4)} x (${shortPos} - ${actualSellQty}) - (${fmt(vatAdjust,4)} - ${fmt(interest,4)} + ${fmt(fee,4)}) x ${actualSellQty} = ${fmt(actualProfit, 2)}`
+    ];
+  } else {
+    const midProfit = deferProfit - vatAdjust - fee - interest;
+    items = [
+      {label: '递延费盈亏', value: deferProfit, precision: 4},
+      {label: '增值税调整盈亏', value: vatAdjust, precision: 4},
+      {label: '手续费', value: fee, precision: 4},
+      {label: '资金利息', value: interest, precision: 4},
+      {label: '中买卖盈亏', value: midProfit, precision: 4, type: midProfit>=0?'success':'danger'},
+    ];
+    formulas = [
+      `递延费盈亏 = ${qty} x ${fmt(settle,2)} x ${fmt(deferRate,5)} x ${days} = ${fmt(deferProfit, 4)}`,
+      `增值税调整盈亏 = (${fmt(vatPrice,2)} - ${fmt(settle,2)}) x ${fmt(vat,4)} / (1+${fmt(vat,4)}) = ${fmt(vatAdjust, 4)}`,
+      `手续费 = ${qty} x ${fmt(vatPrice,2)} x ${fmt(feeRate,5)} x ${fmt(vat,4)} / (1+${fmt(vat,4)}) = ${fmt(fee, 4)}`,
+      `资金利息 = ${qty} x ${fmt(settle,2)} x ${fmt(fundRate,4)} x ${days}/360 = ${fmt(interest, 4)}`,
+      `中买卖盈亏 = ${fmt(deferProfit,4)} - ${fmt(vatAdjust,4)} - ${fmt(fee,4)} - ${fmt(interest,4)} = ${fmt(midProfit, 4)}`
+    ];
+  }
+
+  renderResult('dl_result_grid', items, formulas);
+  document.getElementById('dl_result').style.display = 'block';
+}
+
+// ==================== TD递延费套利 ====================
+let deferStrategy = 'both';
+function setDeferStrategy(s) {
+  deferStrategy = s;
+  document.querySelectorAll('#td-defer .strategy-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+}
+function calcDeferArbitrage() {
+  const qty = +document.getElementById('defer_qty').value;
+  const price = +document.getElementById('defer_price').value;
+  const dir = +document.getElementById('defer_dir').value;
+  const days = +document.getElementById('defer_days').value;
+  const storageRate = +document.getElementById('defer_storage_rate').value;
+  const fundRate = +document.getElementById('defer_fund_rate').value;
+  const deferRate = +document.getElementById('defer_rate').value;
+  const vat = +document.getElementById('defer_vat').value;
+  const tdMargin = +document.getElementById('defer_td_margin').value;
+  const tdFee = +document.getElementById('defer_td_fee').value;
+
+  const deferProfit = qty * dir * price * deferRate * days / (1 + vat);
+  const marginInterest = qty * price * tdMargin * fundRate * days / (1 + vat) / 360;
+  const holdCost = qty * price * fundRate * days / 360;
+  const tdFeeAmt = qty * price * tdFee * 2;
+  const storageFee = qty * days * storageRate;
+
+  let profit, returnRate, annualReturn;
+  if (deferStrategy === 'both') {
+    profit = deferProfit - marginInterest - holdCost - tdFeeAmt - storageFee;
+    returnRate = profit / price;
+    annualReturn = returnRate / days * 360;
+  } else {
+    profit = deferProfit - marginInterest - holdCost - storageFee;
+    returnRate = profit / price;
+    annualReturn = returnRate / days * 360;
+  }
+
+  const items = [
+    {label: '递延费盈亏', value: deferProfit, precision: 4, type: deferProfit>=0?'success':'danger'},
+    {label: '保证金利息', value: marginInterest, precision: 4},
+    {label: '持货成本', value: holdCost, precision: 4},
+    {label: 'TD手续费', value: tdFeeAmt, precision: 4},
+    {label: '仓储费', value: storageFee, precision: 4},
+    {label: '到期收益', value: profit, precision: 4, type: profit>=0?'success':'danger'},
+    {label: '到期收益率', value: returnRate, text: fmtPct(returnRate, 4)},
+    {label: '年化收益率', value: annualReturn, text: fmtPct(annualReturn, 4), type: annualReturn>=0?'success':'danger'},
+  ];
+
+  let formulas = [];
+  if (deferStrategy === 'both') {
+    formulas = [
+      `递延费盈亏 = ${qty} x ${dir} x ${fmt(price,2)} x ${fmt(deferRate,5)} x ${days} / (1+${fmt(vat,4)}) = ${fmt(deferProfit, 4)}`,
+      `保证金利息 = ${qty} x ${fmt(price,2)} x ${fmt(tdMargin,4)} x ${fmt(fundRate,4)} x ${days} / (1+${fmt(vat,4)}) / 360 = ${fmt(marginInterest, 4)}`,
+      `持货成本 = ${qty} x ${fmt(price,2)} x ${fmt(fundRate,4)} x ${days} / 360 = ${fmt(holdCost, 4)}`,
+      `TD手续费 = ${qty} x ${fmt(price,2)} x ${fmt(tdFee,5)} x 2 = ${fmt(tdFeeAmt, 4)}`,
+      `仓储费 = ${qty} x ${days} x ${fmt(storageRate,4)} = ${fmt(storageFee, 4)}`,
+      `到期收益 = ${fmt(deferProfit,4)} - ${fmt(marginInterest,4)} - ${fmt(holdCost,4)} - ${fmt(tdFeeAmt,4)} - ${fmt(storageFee,4)} = ${fmt(profit, 4)}`,
+      `到期收益率 = ${fmt(profit,4)} / ${fmt(price,2)} = ${fmtPct(returnRate, 4)}`,
+      `年化收益率 = ${fmtPct(returnRate, 4)} / ${days} x 360 = ${fmtPct(annualReturn, 4)}`
+    ];
+  } else {
+    formulas = [
+      `递延费盈亏 = ${qty} x ${dir} x ${fmt(price,2)} x ${fmt(deferRate,5)} x ${days} / (1+${fmt(vat,4)}) = ${fmt(deferProfit, 4)}`,
+      `保证金利息 = ${qty} x ${fmt(price,2)} x ${fmt(tdMargin,4)} x ${fmt(fundRate,4)} x ${days} / (1+${fmt(vat,4)}) / 360 = ${fmt(marginInterest, 4)}`,
+      `持货成本 = ${qty} x ${fmt(price,2)} x ${fmt(fundRate,4)} x ${days} / 360 = ${fmt(holdCost, 4)}`,
+      `TD手续费 = 0 (中买策略)`,
+      `仓储费 = ${qty} x ${days} x ${fmt(storageRate,4)} = ${fmt(storageFee, 4)}`,
+      `中买收益 = ${fmt(deferProfit,4)} - ${fmt(marginInterest,4)} - ${fmt(holdCost,4)} - ${fmt(storageFee,4)} = ${fmt(profit, 4)}`,
+      `到期收益率 = ${fmt(profit,4)} / ${fmt(price,2)} = ${fmtPct(returnRate, 4)}`,
+      `年化收益率 = ${fmtPct(returnRate, 4)} / ${days} x 360 = ${fmtPct(annualReturn, 4)}`
+    ];
+  }
+
+  renderResult('defer_result_grid', items, formulas);
+  document.getElementById('defer_result').style.display = 'block';
+}
+</script>
+
+</body>
+</html>
