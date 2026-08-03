@@ -4,9 +4,16 @@
 > 围绕期货套利与多因子研究、大宗供应链 AI 转型的数据作品集合。
 
 ## 作品集主页
-完整的交互式作品集（暗色 · 雨帘动效 · 逐章翻页）：[index.html](./index.html)
-- 在线预览：https://cdn.jsdelivr.net/gh/Shea1206/Data-Analysis@main/index.html
-- GitHub Pages（启用后）：https://shea1206.github.io/data-analysis/
+完整的交互式作品集（暗色 · 星空动效 · 行楷开屏 · 逐章翻页）：[孙诗晴-作品集.html](./孙诗晴-作品集.html)
+- 在线预览：https://cdn.jsdelivr.net/gh/Shea1206/Data-Analysis@main/孙诗晴-作品集.html
+- GitHub Pages（启用后）：https://shea1206.github.io/data-analysis/孙诗晴-作品集.html
+
+**特性**
+- 原生 Canvas 星空：三层星等闪烁、流星、银河带、鼠标互动（零依赖，断网可用）
+- 七个章节逐章翻页：导航 / 圆点 / 方向键（← →）切换，支持 `#章节` 锚点直达
+- 经历详情弹层、技能搜索、数字滚动、3D 项目卡
+- 支持打印 / 导出 PDF（自动平铺全部章节、浅色化）
+- 移动端适配；`prefers-reduced-motion` 友好
 
 ---
 
@@ -46,7 +53,7 @@
 ## 目录结构
 ```
 .
-├── index.html                      # 作品集主页（暗色 · 雨帘 · 翻页）
+├── 孙诗晴-作品集.html                # 作品集主页（暗色 · 星空 · 行楷开屏 · 翻页）
 ├── README.md
 ├── 期货研究/
 │   ├── index.html                  # 项目介绍页（三件工具总览）
